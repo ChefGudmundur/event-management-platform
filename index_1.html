@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Management Platform</title>
+<style>
+  :root{
+    --ink:#221f1b;
+    --ink-soft:#5c574e;
+    --paper:#faf8f4;
+    --surface:#ffffff;
+    --line:#e6e1d6;
+    --accent:#0f6e56;
+    --accent-soft:#e1f5ee;
+    --warn:#854f0b;
+    --warn-soft:#faeeda;
+    --danger:#a32d2d;
+    --danger-soft:#fcebeb;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .center-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:32px;
+    width:100%;
+    max-width:380px;
+  }
+  .brand{
+    font-size:13px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--accent);
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  h1{
+    font-size:22px;
+    font-weight:600;
+    margin:0 0 24px;
+  }
+  .tabs{
+    display:flex;
+    gap:4px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:3px;
+    margin-bottom:20px;
+  }
+  .tab{
+    flex:1;
+    text-align:center;
+    padding:7px 0;
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink-soft);
+    border-radius:6px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .tab.active{
+    background:var(--surface);
+    color:var(--ink);
+    box-shadow:0 1px 2px rgba(0,0,0,0.06);
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink-soft);
+    margin:14px 0 6px;
+  }
+  input[type=email],input[type=password],input[type=text],select{
+    width:100%;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:14px;
+    background:var(--surface);
+    color:var(--ink);
+  }
+  input:focus,select:focus{
+    outline:2px solid var(--accent);
+    outline-offset:1px;
+  }
+  button{
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .btn-primary{
+    width:100%;
+    margin-top:20px;
+    padding:11px 0;
+    background:var(--accent);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    font-size:14px;
+    font-weight:600;
+  }
+  .btn-primary:disabled{opacity:0.6;cursor:default;}
+  .btn-secondary{
+    padding:9px 16px;
+    background:var(--surface);
+    color:var(--ink);
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:13px;
+    font-weight:500;
+  }
+  .error-msg{
+    margin-top:14px;
+    padding:10px 12px;
+    background:var(--danger-soft);
+    color:var(--danger);
+    border-radius:8px;
+    font-size:13px;
+  }
+  .hint{
+    margin-top:18px;
+    font-size:12px;
+    color:var(--ink-soft);
+    line-height:1.5;
+  }
+  code.uid{
+    display:block;
+    margin-top:8px;
+    padding:10px 12px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:8px;
+    font-size:12px;
+    word-break:break-all;
+  }
+  /* App shell */
+  header{
+    border-bottom:1px solid var(--line);
+    background:var(--surface);
+    padding:16px 28px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .tenant-name{font-size:15px;font-weight:600;}
+  .role-tag{
+    font-size:12px;
+    color:var(--ink-soft);
+  }
+  main{
+    max-width:920px;
+    margin:0 auto;
+    padding:32px 28px;
+  }
+  .section-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:16px;
+  }
+  h2{font-size:18px;font-weight:600;margin:0;}
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  th,td{
+    text-align:left;
+    padding:11px 16px;
+    font-size:13px;
+    border-bottom:1px solid var(--line);
+  }
+  th{
+    color:var(--ink-soft);
+    font-weight:500;
+    background:var(--paper);
+  }
+  tr:last-child td{border-bottom:none;}
+  .badge{
+    display:inline-block;
+    padding:3px 10px;
+    border-radius:100px;
+    font-size:12px;
+    font-weight:500;
+    background:var(--accent-soft);
+    color:var(--accent);
+  }
+  .empty-state{
+    text-align:center;
+    padding:48px 24px;
+    color:var(--ink-soft);
+    font-size:14px;
+    background:var(--surface);
+    border:1px dashed var(--line);
+    border-radius:var(--radius);
+  }
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(34,31,27,0.4);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen" class="center-screen">
+  <div class="card">
+    <p class="brand">Event management platform</p>
+    <h1 id="auth-title">Sign in</h1>
+    <div class="tabs">
+      <div class="tab active" data-mode="signin">Sign in</div>
+      <div class="tab" data-mode="signup">Sign up</div>
+    </div>
+    <form id="auth-form">
+      <label for="email">Email</label>
+      <input type="email" id="email" required autocomplete="email">
+      <label for="password">Password</label>
+      <input type="password" id="password" required autocomplete="current-password" minlength="6">
+      <button type="submit" class="btn-primary" id="auth-submit">Sign in</button>
+    </form>
+    <div id="auth-error" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<!-- NO TENANT SCREEN -->
+<div id="no-tenant-screen" class="center-screen hidden">
+  <div class="card">
+    <h1>Not linked to a workspace yet</h1>
+    <p style="font-size:14px;color:var(--ink-soft);line-height:1.6;">
+      Your account exists, but isn't connected to a tenant yet. Send this ID to whoever is setting up your workspace.
+    </p>
+    <code class="uid" id="no-tenant-uid"></code>
+    <button class="btn-secondary" id="no-tenant-signout" style="margin-top:18px;">Sign out</button>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app-screen" class="hidden">
+  <header>
+    <div>
+      <div class="tenant-name" id="tenant-name"></div>
+      <div class="role-tag" id="role-name"></div>
+    </div>
+    <button class="btn-secondary" id="signout-btn">Sign out</button>
+  </header>
+  <main>
+    <div class="section-head">
+      <h2>Events</h2>
+      <button class="btn-secondary" id="new-event-btn">+ New event</button>
+    </div>
+    <div id="events-area"></div>
+  </main>
+</div>
+
+<!-- NEW EVENT MODAL -->
+<div id="event-modal" class="modal-overlay hidden">
+  <div class="card" style="max-width:420px;">
+    <h1 style="font-size:18px;">New event</h1>
+    <form id="event-form">
+      <label for="ev-name">Event name</label>
+      <input type="text" id="ev-name" required>
+      <label for="ev-type">Event type</label>
+      <select id="ev-type" required></select>
+      <label for="ev-status">Status</label>
+      <select id="ev-status" required></select>
+      <div style="display:flex;gap:8px;margin-top:20px;">
+        <button type="button" class="btn-secondary" id="event-cancel" style="flex:1;">Cancel</button>
+        <button type="submit" class="btn-primary" style="margin-top:0;flex:1;">Create</button>
+      </div>
+    </form>
+    <div id="event-error" class="error-msg hidden"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+  const SUPABASE_URL = 'https://raexihusxuonhtjqihaz.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_6bhiWTU-h8fK9gzQk1nW1g_EEOSCzmq';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const el = id => document.getElementById(id);
+  const show = id => el(id).classList.remove('hidden');
+  const hide = id => el(id).classList.add('hidden');
+
+  let authMode = 'signin';
+  let currentTenant = null;
+
+  // ---- Auth screen ----
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      authMode = tab.dataset.mode;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+      el('auth-title').textContent = authMode === 'signin' ? 'Sign in' : 'Create account';
+      el('auth-submit').textContent = authMode === 'signin' ? 'Sign in' : 'Create account';
+      hide('auth-error');
+    });
+  });
+
+  el('auth-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hide('auth-error');
+    const email = el('email').value.trim();
+    const password = el('password').value;
+    el('auth-submit').disabled = true;
+
+    const { error } = authMode === 'signin'
+      ? await sb.auth.signInWithPassword({ email, password })
+      : await sb.auth.signUp({ email, password });
+
+    el('auth-submit').disabled = false;
+
+    if (error) {
+      el('auth-error').textContent = error.message;
+      show('auth-error');
+      return;
+    }
+    if (authMode === 'signup') {
+      el('auth-error').textContent = 'Account created. Check your email if confirmation is required, then sign in.';
+      el('auth-error').style.background = 'var(--accent-soft)';
+      el('auth-error').style.color = 'var(--accent)';
+      show('auth-error');
+      return;
+    }
+    await loadApp();
+  });
+
+  // ---- Sign out ----
+  async function signOut() {
+    await sb.auth.signOut();
+    location.reload();
+  }
+  el('signout-btn').addEventListener('click', signOut);
+  el('no-tenant-signout').addEventListener('click', signOut);
+
+  // ---- Resolve tenant context and load app ----
+  async function loadApp() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) { hide('app-screen'); hide('no-tenant-screen'); show('auth-screen'); return; }
+
+    const { data: appUser, error } = await sb
+      .from('app_users')
+      .select('*, tenant:tenants(*), role:tenant_roles(*)')
+      .eq('auth_user_id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    if (!appUser) {
+      hide('auth-screen');
+      el('no-tenant-uid').textContent = user.id;
+      show('no-tenant-screen');
+      return;
+    }
+
+    currentTenant = appUser.tenant;
+    hide('auth-screen');
+    hide('no-tenant-screen');
+    el('tenant-name').textContent = appUser.tenant.company_name;
+    el('role-name').textContent = appUser.role.name;
+    show('app-screen');
+    await loadEvents();
+  }
+
+  // ---- Events list ----
+  async function loadEvents() {
+    const { data: events, error } = await sb
+      .from('events')
+      .select('*, status:tenant_event_statuses(name,color_hex), type:event_types(name)')
+      .order('created_at', { ascending: false });
+
+    if (error) { console.error(error); return; }
+
+    const area = el('events-area');
+    if (!events || events.length === 0) {
+      area.innerHTML = '<div class="empty-state">No events yet. Create the first one to get started.</div>';
+      return;
+    }
+
+    const rows = events.map(ev => `
+      <tr>
+        <td>${ev.name}</td>
+        <td>${ev.type ? ev.type.name : '—'}</td>
+        <td><span class="badge">${ev.status ? ev.status.name : '—'}</span></td>
+        <td>${ev.start_at ? new Date(ev.start_at).toLocaleDateString() : '—'}</td>
+      </tr>`).join('');
+
+    area.innerHTML = `
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // ---- New event modal ----
+  el('new-event-btn').addEventListener('click', async () => {
+    hide('event-error');
+    el('event-form').reset();
+
+    const [{ data: types }, { data: statuses }] = await Promise.all([
+      sb.from('event_types').select('id,name').order('sort_order'),
+      sb.from('tenant_event_statuses').select('id,name').order('sort_order')
+    ]);
+
+    el('ev-type').innerHTML = (types || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('')
+      || '<option value="">No event types yet — add one in Supabase</option>';
+    el('ev-status').innerHTML = (statuses || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('')
+      || '<option value="">No statuses yet — add one in Supabase</option>';
+
+    show('event-modal');
+  });
+
+  el('event-cancel').addEventListener('click', () => hide('event-modal'));
+
+  el('event-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hide('event-error');
+
+    const { error } = await sb.from('events').insert({
+      tenant_id: currentTenant.id,
+      name: el('ev-name').value.trim(),
+      event_type_id: el('ev-type').value,
+      status_id: el('ev-status').value
+    });
+
+    if (error) {
+      el('event-error').textContent = error.message;
+      show('event-error');
+      return;
+    }
+    hide('event-modal');
+    await loadEvents();
+  });
+
+  // ---- Boot ----
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      await loadApp();
+    }
+  })();
+</script>
+</body>
+</html>
