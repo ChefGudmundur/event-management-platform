@@ -149,7 +149,6 @@
     font-size:12px;
     word-break:break-all;
   }
-  /* App shell */
   header{
     border-bottom:1px solid var(--line);
     background:var(--surface);
@@ -162,6 +161,11 @@
   .role-tag{
     font-size:12px;
     color:var(--ink-soft);
+  }
+  nav{
+    display:flex;
+    gap:8px;
+    align-items:center;
   }
   main{
     max-width:920px;
@@ -222,6 +226,42 @@
     justify-content:center;
     padding:24px;
   }
+  .settings-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:24px;
+    margin-bottom:20px;
+  }
+  .settings-card h3{
+    font-size:15px;
+    font-weight:600;
+    margin:0 0 14px;
+  }
+  .list-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 0;
+    border-bottom:1px solid var(--line);
+    font-size:14px;
+  }
+  .list-row:last-child{border-bottom:none;}
+  .delete-link{
+    background:none;
+    border:none;
+    color:var(--danger);
+    font-size:12px;
+    font-weight:500;
+    padding:0;
+  }
+  .inline-form{
+    display:flex;
+    gap:8px;
+    margin-top:14px;
+  }
+  .inline-form input{flex:1;}
+  .inline-form button{flex-shrink:0;}
   .hidden{display:none !important;}
 </style>
 </head>
@@ -266,14 +306,44 @@
       <div class="tenant-name" id="tenant-name"></div>
       <div class="role-tag" id="role-name"></div>
     </div>
-    <button class="btn-secondary" id="signout-btn">Sign out</button>
+    <nav>
+      <button class="btn-secondary" id="nav-events-btn">Events</button>
+      <button class="btn-secondary hidden" id="nav-settings-btn">Settings</button>
+      <button class="btn-secondary" id="signout-btn">Sign out</button>
+    </nav>
   </header>
   <main>
-    <div class="section-head">
-      <h2>Events</h2>
-      <button class="btn-secondary" id="new-event-btn">+ New event</button>
+    <div id="events-section">
+      <div class="section-head">
+        <h2>Events</h2>
+        <button class="btn-secondary" id="new-event-btn">+ New event</button>
+      </div>
+      <div id="events-area"></div>
     </div>
-    <div id="events-area"></div>
+
+    <div id="settings-section" class="hidden">
+      <div class="section-head">
+        <h2>Settings</h2>
+      </div>
+
+      <div class="settings-card">
+        <h3>Event types</h3>
+        <div id="event-types-list"></div>
+        <form id="event-type-form" class="inline-form">
+          <input type="text" id="new-event-type-name" placeholder="e.g. Wedding" required>
+          <button type="submit" class="btn-secondary">Add</button>
+        </form>
+      </div>
+
+      <div class="settings-card">
+        <h3>Statuses</h3>
+        <div id="statuses-list"></div>
+        <form id="status-form" class="inline-form">
+          <input type="text" id="new-status-name" placeholder="e.g. Confirmed" required>
+          <button type="submit" class="btn-secondary">Add</button>
+        </form>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -309,6 +379,7 @@
 
   let authMode = 'signin';
   let currentTenant = null;
+  let currentRole = null;
 
   // ---- Auth screen ----
   document.querySelectorAll('.tab').forEach(tab => {
@@ -381,13 +452,38 @@
     }
 
     currentTenant = appUser.tenant;
+    currentRole = appUser.role;
     hide('auth-screen');
     hide('no-tenant-screen');
     el('tenant-name').textContent = appUser.tenant.company_name;
     el('role-name').textContent = appUser.role.name;
+
+    if (currentRole.is_admin) {
+      show('nav-settings-btn');
+    } else {
+      hide('nav-settings-btn');
+    }
+
     show('app-screen');
-    await loadEvents();
+    showEventsView();
   }
+
+  // ---- Nav switching ----
+  function showEventsView() {
+    show('events-section');
+    hide('settings-section');
+    loadEvents();
+  }
+
+  async function showSettingsView() {
+    hide('events-section');
+    show('settings-section');
+    await loadEventTypesSettings();
+    await loadStatusesSettings();
+  }
+
+  el('nav-events-btn').addEventListener('click', showEventsView);
+  el('nav-settings-btn').addEventListener('click', showSettingsView);
 
   // ---- Events list ----
   async function loadEvents() {
@@ -425,14 +521,14 @@
     el('event-form').reset();
 
     const [{ data: types }, { data: statuses }] = await Promise.all([
-      sb.from('event_types').select('id,name').order('sort_order'),
-      sb.from('tenant_event_statuses').select('id,name').order('sort_order')
+      sb.from('event_types').select('id,name').order('name'),
+      sb.from('tenant_event_statuses').select('id,name').order('name')
     ]);
 
     el('ev-type').innerHTML = (types || []).map(t => `<option value="${t.id}">${t.name}</option>`).join('')
-      || '<option value="">No event types yet — add one in Supabase</option>';
+      || '<option value="">No event types yet — add one in Settings</option>';
     el('ev-status').innerHTML = (statuses || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('')
-      || '<option value="">No statuses yet — add one in Supabase</option>';
+      || '<option value="">No statuses yet — add one in Settings</option>';
 
     show('event-modal');
   });
@@ -457,6 +553,83 @@
     }
     hide('event-modal');
     await loadEvents();
+  });
+
+  // ---- Settings: simple list renderer ----
+  function renderSimpleList(containerId, items, onDelete) {
+    const c = el(containerId);
+    if (!items || items.length === 0) {
+      c.innerHTML = '<div class="empty-state" style="padding:20px;">None yet — add one below.</div>';
+      return;
+    }
+    c.innerHTML = items.map(i => `
+      <div class="list-row">
+        <span>${i.name}</span>
+        <button type="button" class="delete-link" data-id="${i.id}">Remove</button>
+      </div>`).join('');
+    c.querySelectorAll('button[data-id]').forEach(btn => {
+      btn.addEventListener('click', () => onDelete(btn.dataset.id));
+    });
+  }
+
+  // ---- Settings: event types ----
+  async function loadEventTypesSettings() {
+    const { data, error } = await sb
+      .from('event_types')
+      .select('id,name')
+      .eq('tenant_id', currentTenant.id)
+      .order('name');
+    if (error) { console.error(error); return; }
+    renderSimpleList('event-types-list', data, deleteEventType);
+  }
+
+  async function deleteEventType(id) {
+    await sb.from('event_types').delete().eq('id', id);
+    await loadEventTypesSettings();
+  }
+
+  el('event-type-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = el('new-event-type-name').value.trim();
+    if (!name) return;
+    const { error } = await sb.from('event_types').insert({
+      tenant_id: currentTenant.id,
+      name,
+      sort_order: 0
+    });
+    if (error) { alert(error.message); return; }
+    el('new-event-type-name').value = '';
+    await loadEventTypesSettings();
+  });
+
+  // ---- Settings: statuses ----
+  async function loadStatusesSettings() {
+    const { data, error } = await sb
+      .from('tenant_event_statuses')
+      .select('id,name')
+      .eq('tenant_id', currentTenant.id)
+      .order('name');
+    if (error) { console.error(error); return; }
+    renderSimpleList('statuses-list', data, deleteStatus);
+  }
+
+  async function deleteStatus(id) {
+    await sb.from('tenant_event_statuses').delete().eq('id', id);
+    await loadStatusesSettings();
+  }
+
+  el('status-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = el('new-status-name').value.trim();
+    if (!name) return;
+    const { error } = await sb.from('tenant_event_statuses').insert({
+      tenant_id: currentTenant.id,
+      name,
+      sort_order: 0
+    });
+    if (error) { alert(error.message); return; }
+    el('new-status-name').value = '';
+    await loadStatusesSettings();
   });
 
   // ---- Boot ----
